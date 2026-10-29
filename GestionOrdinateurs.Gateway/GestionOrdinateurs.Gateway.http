@@ -1,0 +1,14 @@
+@GestionOrdinateurs.Gateway_HostAddress = http://localhost:5010
+@token = remplacer-par-un-token-jwt
+
+GET {{GestionOrdinateurs.Gateway_HostAddress}}/api/ordinateurs
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{GestionOrdinateurs.Gateway_HostAddress}}/api/reparations/historique
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###

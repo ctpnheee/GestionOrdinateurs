@@ -1,0 +1,78 @@
+@page "/ordinateurs"
+@using GestionOrdinateurs.Shared
+@inject IHttpClientFactory HttpClientFactory
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+
+<PageTitle>Ordinateurs</PageTitle>
+
+<h1>Liste des ordinateurs</h1>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+else if (ordinateurs == null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (ordinateurs.Count == 0)
+{
+    <p>Aucun ordinateur disponible.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Prix</th>
+                <th>Devise</th>
+                <th>Vendu</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ordinateur in ordinateurs)
+            {
+                <tr>
+                    <td>@ordinateur.Nom</td>
+                    <td>@ordinateur.Prix.ToString("0.00")</td>
+                    <td>EUR</td>
+                    <td>@(ordinateur.Vendu ? "Oui" : "Non")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Ordinateur>? ordinateurs;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Récupère le token enregistré lors de la connexion.
+            var token = await SessionStorage.GetItemAsync<string>("jwtToken");
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                errorMessage = "Vous devez être connecté pour consulter les ordinateurs.";
+                return;
+            }
+
+            var client = HttpClientFactory.CreateClient("Gateway");
+
+            // Ajoute le token JWT avant d'appeler l'endpoint protégé.
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // L'appel passe par la Gateway sur le port 5010.
+            ordinateurs = await client.GetFromJsonAsync<List<Ordinateur>>("api/ordinateurs") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Impossible de charger la liste des ordinateurs.";
+        }
+    }
+}

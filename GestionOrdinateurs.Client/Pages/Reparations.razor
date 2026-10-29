@@ -1,0 +1,87 @@
+@page "/reparations"
+@inject IHttpClientFactory HttpClientFactory
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+
+<PageTitle>Historique des réparations</PageTitle>
+
+<h1>Historique des réparations</h1>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+else if (reparations == null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (reparations.Count == 0)
+{
+    <p>Aucune réparation dans l'historique.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Ordinateur</th>
+                <th>Technicien</th>
+                <th>Type de réparation</th>
+                <th>Date d'intervention</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var reparation in reparations)
+            {
+                <tr>
+                    <td>@reparation.NomOrdinateur</td>
+                    <td>@reparation.Technicien</td>
+                    <td>@reparation.TypeReparation</td>
+                    <td>@reparation.DateIntervention.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<HistoriqueReparation>? reparations;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Récupère le token enregistré lors de la connexion.
+            var token = await SessionStorage.GetItemAsync<string>("jwtToken");
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                errorMessage = "Vous devez être connecté pour consulter les réparations.";
+                return;
+            }
+
+            var client = HttpClientFactory.CreateClient("Gateway");
+
+            // Ajoute le token JWT avant d'appeler l'endpoint protégé.
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // L'historique est demandé à travers la Gateway.
+            reparations = await client
+                .GetFromJsonAsync<List<HistoriqueReparation>>("api/reparations/historique") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Impossible de charger l'historique des réparations.";
+        }
+    }
+
+    private sealed class HistoriqueReparation
+    {
+        public int OrdinateurId { get; set; }
+        public string NomOrdinateur { get; set; } = string.Empty;
+        public string Technicien { get; set; } = string.Empty;
+        public string TypeReparation { get; set; } = string.Empty;
+        public DateTime DateIntervention { get; set; }
+    }
+}

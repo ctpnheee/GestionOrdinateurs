@@ -1,0 +1,72 @@
+﻿@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">GestionOrdinateurs.Client</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                Accueil
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ordinateurs">
+                Ordinateurs
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="reparations">
+                Réparations
+            </NavLink>
+        </div>
+        @if (isAuthenticated)
+        {
+            <div class="nav-item px-3">
+                <button type="button" class="nav-link btn btn-link" @onclick="LogoutAsync">
+                    Déconnexion
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="login">
+                    Connexion
+                </NavLink>
+            </div>
+        }
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    private bool isAuthenticated;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await SessionStorage.GetItemAsync<string>("jwtToken");
+        isAuthenticated = !string.IsNullOrWhiteSpace(token);
+    }
+
+    private async Task LogoutAsync()
+    {
+        await SessionStorage.RemoveItemAsync("jwtToken");
+        isAuthenticated = false;
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

@@ -1,0 +1,70 @@
+@page "/login"
+
+@inject IHttpClientFactory HttpClientFactory
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject NavigationManager Navigation
+
+<PageTitle>Connexion</PageTitle>
+
+<h3>Connexion</h3>
+
+<div class="mb-3">
+    <label for="login" class="form-label">Login</label>
+    <InputText id="login" @bind-Value="LoginValue" class="form-control" />
+</div>
+
+<button class="btn btn-primary" @onclick="ConnectAsync" disabled="@IsLoading">
+    Se connecter
+</button>
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger mt-3" role="alert">
+        @ErrorMessage
+    </div>
+}
+
+@code
+{
+    private string LoginValue { get; set; } = string.Empty;
+    private string? ErrorMessage { get; set; }
+    private bool IsLoading { get; set; }
+
+    private async Task ConnectAsync()
+    {
+        if (string.IsNullOrWhiteSpace(LoginValue))
+        {
+            ErrorMessage = "Veuillez saisir un login.";
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AuthentificationApi");
+            var encodedLogin = Uri.EscapeDataString(LoginValue.Trim());
+            var response = await client.PostAsync($"auth/login?login={encodedLogin}", null);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                ErrorMessage = "Login inconnu.";
+                return;
+            }
+
+            var token = (await response.Content.ReadAsStringAsync()).Trim().Trim('"');
+
+            await SessionStorage.SetItemAsync("jwtToken", token);
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            ErrorMessage = "Impossible de contacter le service d'authentification.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}
