@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_DB: GestionOrdinateursDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - appnet
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8180
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+    command: start-dev
+    ports:
+      - "8180:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - appnet
+
+  gestion-ordinateurs-api:
+    image: ${DOCKER_ACCOUNT:-gestionordinateurs}/gestionordinateurs-api:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.API/Dockerfile
+    container_name: gestion_ordinateurs_api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5086
+    ports:
+      - "5086:5086"
+    networks:
+      - appnet
+
+  authentification-api:
+    image: ${DOCKER_ACCOUNT:-gestionordinateurs}/authentificationapi:latest
+    build:
+      context: .
+      dockerfile: AuthentificationApi/Dockerfile
+    container_name: authentification_api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5292
+      Services__GestionOrdinateursApi: http://gestion-ordinateurs-api:5086/
+    ports:
+      - "5292:5292"
+    depends_on:
+      - gestion-ordinateurs-api
+    networks:
+      - appnet
+
+  gateway:
+    image: ${DOCKER_ACCOUNT:-gestionordinateurs}/gestionordinateurs-gateway:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.Gateway/Dockerfile
+    container_name: gestion_ordinateurs_gateway
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5010
+      ReverseProxy__Clusters__gestion-ordinateurs-api__Destinations__api__Address: http://gestion-ordinateurs-api:5086/
+    ports:
+      - "5010:5010"
+    depends_on:
+      - gestion-ordinateurs-api
+    networks:
+      - appnet
+
+  client:
+    image: ${DOCKER_ACCOUNT:-gestionordinateurs}/gestionordinateurs-client:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.Client/Dockerfile
+    container_name: gestion_ordinateurs_client
+    ports:
+      - "5001:5000"
+    depends_on:
+      - authentification-api
+      - gateway
+    networks:
+      - appnet
+
+volumes:
+  postgres_data:
+  keycloak_data:
+
+networks:
+  appnet:
+    driver: bridge
