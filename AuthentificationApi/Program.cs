@@ -1,3 +1,5 @@
+using AuthentificationApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -9,7 +11,6 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:5000",
-                "http://localhost:5001",
                 "http://localhost:5171",
                 "https://localhost:7087")
             .AllowAnyHeader()
@@ -25,6 +26,7 @@ builder.Services.AddHttpClient("GestionOrdinateursApi", client =>
 
     client.BaseAddress = new Uri(baseUrl);
 });
+builder.Services.AddHttpClient<KeycloakAuthService>();
 
 var app = builder.Build();
 

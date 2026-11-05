@@ -38,11 +38,33 @@ ScaffoldingReadMe.txt
 
 # dotenv environment variables file
 .env
+.env.*
+!.env.example
+
+# IDE and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# SQLite temporary files (keep the project database itself tracked)
+*.db-shm
+*.db-wal
+*.db-journal
 
 # Others
 ~$*
 *~
 CodeCoverage/
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
 
 # MSBuild Binary and Structured Log
 *.binlog
@@ -55,3 +77,6 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# JetBrains Rider
+*.sln.iml

@@ -1,7 +1,10 @@
 @page "/login"
 
+@using System.Text.Json.Serialization
+@using GestionOrdinateurs.Client.Authentication
+
 @inject IHttpClientFactory HttpClientFactory
-@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject KeycloakAuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
 
 <PageTitle>Connexion</PageTitle>
@@ -9,8 +12,13 @@
 <h3>Connexion</h3>
 
 <div class="mb-3">
-    <label for="login" class="form-label">Login</label>
-    <InputText id="login" @bind-Value="LoginValue" class="form-control" />
+    <label for="username" class="form-label">Utilisateur</label>
+    <InputText id="username" @bind-Value="Username" class="form-control" />
+</div>
+
+<div class="mb-3">
+    <label for="password" class="form-label">Mot de passe</label>
+    <InputText id="password" type="password" @bind-Value="Password" class="form-control" />
 </div>
 
 <button class="btn btn-primary" @onclick="ConnectAsync" disabled="@IsLoading">
@@ -26,15 +34,16 @@
 
 @code
 {
-    private string LoginValue { get; set; } = string.Empty;
+    private string Username { get; set; } = string.Empty;
+    private string Password { get; set; } = string.Empty;
     private string? ErrorMessage { get; set; }
     private bool IsLoading { get; set; }
 
     private async Task ConnectAsync()
     {
-        if (string.IsNullOrWhiteSpace(LoginValue))
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "Veuillez saisir un login.";
+            ErrorMessage = "Veuillez saisir un utilisateur et un mot de passe.";
             return;
         }
 
@@ -44,18 +53,26 @@
         try
         {
             var client = HttpClientFactory.CreateClient("AuthentificationApi");
-            var encodedLogin = Uri.EscapeDataString(LoginValue.Trim());
-            var response = await client.PostAsync($"auth/login?login={encodedLogin}", null);
+            var response = await client.PostAsJsonAsync(
+                "auth/login",
+                new { username = Username.Trim(), password = Password });
 
             if (!response.IsSuccessStatusCode)
             {
-                ErrorMessage = "Login inconnu.";
+                ErrorMessage = "Utilisateur ou mot de passe incorrect.";
                 return;
             }
 
-            var token = (await response.Content.ReadAsStringAsync()).Trim().Trim('"');
+            var tokenResponse = await response.Content.ReadFromJsonAsync<KeycloakTokenResponse>();
 
-            await SessionStorage.SetItemAsync("jwtToken", token);
+            if (string.IsNullOrWhiteSpace(tokenResponse?.AccessToken))
+            {
+                ErrorMessage = "Keycloak n'a pas renvoyé de jeton valide.";
+                return;
+            }
+
+            await AuthenticationStateProvider.MarkUserAsAuthenticatedAsync(
+                tokenResponse.AccessToken);
             Navigation.NavigateTo("/", forceLoad: true);
         }
         catch (HttpRequestException)
@@ -66,5 +83,11 @@
         {
             IsLoading = false;
         }
+    }
+
+    private sealed class KeycloakTokenResponse
+    {
+        [JsonPropertyName("access_token")]
+        public string AccessToken { get; set; } = string.Empty;
     }
 }

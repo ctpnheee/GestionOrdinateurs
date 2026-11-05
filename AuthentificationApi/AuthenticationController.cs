@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using AuthentificationApi;
 using GestionOrdinateurs.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -15,17 +16,22 @@ public class AuthenticationController : ControllerBase
 {
     private readonly IHttpClientFactory httpClientFactory;
     private readonly IConfiguration configuration;
+    private readonly KeycloakAuthService keycloakAuthService;
 
     public AuthenticationController(
         IHttpClientFactory httpClientFactory,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        KeycloakAuthService keycloakAuthService)
     {
         this.httpClientFactory = httpClientFactory;
         this.configuration = configuration;
+        this.keycloakAuthService = keycloakAuthService;
     }
 
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromQuery] string login)
+    // Ancien mécanisme conservé pour pouvoir comparer ou restaurer
+    // l'authentification utilisée avant l'intégration de Keycloak.
+    [HttpPost("legacy-login")]
+    public async Task<IActionResult> LegacyLogin([FromQuery] string login)
     {
         var client = httpClientFactory.CreateClient("GestionOrdinateursApi");
         var encodedLogin = Uri.EscapeDataString(login);
@@ -47,6 +53,29 @@ public class AuthenticationController : ControllerBase
                 "La réponse de l'API des utilisateurs est invalide.");
 
         return Ok(GenerateJwtToken(user));
+    }
+
+    // Point d'entrée désormais utilisé par le client : les identifiants sont
+    // transmis à Keycloak, qui retourne ses propres jetons OIDC.
+    [HttpPost("login")]
+    public async Task<IActionResult> KeycloakLogin([FromBody] KeycloakLoginRequest request)
+    {
+        try
+        {
+            return Ok(await keycloakAuthService.LoginAsync(
+                request.Username,
+                request.Password));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized("Nom d'utilisateur ou mot de passe incorrect.");
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(
+                StatusCodes.Status502BadGateway,
+                "Le service Keycloak est indisponible.");
+        }
     }
 
     private string GenerateJwtToken(User user)

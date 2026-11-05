@@ -5,4 +5,6 @@
 .idea/
 .vs/
 .vscode/
+.env
+.env.*
 README.md

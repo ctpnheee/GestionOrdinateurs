@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Blazored.SessionStorage;
 using GestionOrdinateurs.Client;
+using GestionOrdinateurs.Client.Authentication;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -11,6 +13,10 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 // Le token JWT sera conservé dans la session du navigateur.
 builder.Services.AddBlazoredSessionStorage();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<KeycloakAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+    provider.GetRequiredService<KeycloakAuthenticationStateProvider>());
 
 // Client utilisé uniquement pour obtenir le token JWT.
 builder.Services.AddHttpClient("AuthentificationApi", client =>

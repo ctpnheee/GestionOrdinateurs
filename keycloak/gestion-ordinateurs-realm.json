@@ -1,0 +1,75 @@
+{
+  "realm": "gestion-ordinateurs",
+  "enabled": true,
+  "displayName": "Gestion Ordinateurs",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "roles": {
+    "realm": [
+      { "name": "Admin" },
+      { "name": "Gestionnaire" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "gestion-ordinateurs-client",
+      "name": "Gestion Ordinateurs Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "gestion-ordinateurs-secret",
+      "publicClient": false,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:5000",
+      "baseUrl": "http://localhost:5000",
+      "redirectUris": ["http://localhost:5000/*"],
+      "webOrigins": ["http://localhost:5000"],
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "user-admin",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "user-admin@example.com",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "123", "temporary": false }
+      ],
+      "realmRoles": ["Admin"]
+    },
+    {
+      "username": "user-general",
+      "firstName": "General",
+      "lastName": "User",
+      "email": "user-general@example.com",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "123", "temporary": false }
+      ],
+      "realmRoles": ["Gestionnaire"]
+    }
+  ]
+}
